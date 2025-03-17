@@ -13,6 +13,9 @@ export default class Location_1 extends Phaser.Scene{
     this.layer = this.map.createLayer("ground", tiles, 0, 0);
     this.layer.setCollisionByProperty({collides: true});
     this.map.setCollisionByExclusion(-1, true);
+    this.matter.world.setBounds(this.map.widthInPixels, this.map.heightInPixels);
+    this.matter.world.createDebugGraphic();
+    this.matter.world.drawDebug = true;
 
     this.body.setup(this)
   }
