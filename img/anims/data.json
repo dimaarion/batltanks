@@ -1,0 +1,25 @@
+{
+  "anims": [
+    {
+      "key": "pule-run",
+      "type": "frame",
+      "frames": [
+        {
+          "key": "Medium_Shell",
+          "frame": "pule",
+          "duration": 3,
+          "visible": true
+        }
+      ],
+      "frameRate": 24,
+      "duration": 1.5,
+      "skipMissedFrames": true,
+      "delay": 0,
+      "repeat": -1,
+      "repeatDelay": 0,
+      "yoyo": false,
+      "showOnStart": false,
+      "hideOnComplete": false
+    }
+  ]
+}

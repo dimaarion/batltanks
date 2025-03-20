@@ -14,7 +14,6 @@ const config = {
   width: window.innerWidth,
   height: window.innerHeight,
   backgroundColor: "#fff",
-  scene: [Preload,StartScene,Location_1],
   physics: {
     scene:[
       {
@@ -41,6 +40,7 @@ const config = {
   audio: {
     disableWebAudio: false
   },
+  scene: [Preload,StartScene,Location_1],
 };
 
 const game = new Phaser.Game(config);

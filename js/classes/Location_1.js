@@ -2,7 +2,8 @@ import Phaser from "phaser"
 import Body from "./Body";
 export default class Location_1 extends Phaser.Scene{
   map
-  body = new Body(500,500)
+  body = new Body(500,500,"tank_1")
+  body2 = new Body(600,600,"tank_2")
   constructor() {
     super("Location_1");
   }
@@ -18,10 +19,17 @@ export default class Location_1 extends Phaser.Scene{
     this.matter.world.drawDebug = true;
 
     this.body.setup(this)
+    this.body2.setup(this)
+
+
+
+
+
   }
 
   update(time, delta) {
     this.body.draw()
+
   }
 
 }
