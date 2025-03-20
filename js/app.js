@@ -1,5 +1,4 @@
 import Preload from "./classes/Preload";
-import VirtualJoystickPlugin from 'phaser3-rex-plugins/plugins/virtualjoystick-plugin.js';
 import PhaserMatterCollisionPlugin from "phaser-matter-collision-plugin";
 import StartScene from "./classes/StartScene";
 import Location_1 from "./classes/Location_1";
@@ -21,11 +20,6 @@ const config = {
         key: "matterCollision", // Where to store in Scene.Systems, e.g. scene.sys.matterCollision
         mapping: "matterCollision" // Where to store in the Scene, e.g. scene.matterCollision
 
-      }, {
-        key: 'rexvirtualjoystickplugin',
-        plugin: VirtualJoystickPlugin,
-        mapping: 'rexvirtualjoystickplugin',
-        start: true
       }
     ],
     default: 'matter',
