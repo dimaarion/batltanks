@@ -4,7 +4,7 @@ export default class Location_1 extends Phaser.Scene{
   map
   cam
   body = new Body(500,500,"tank_1")
-
+  body2 = new Body(800,500,"tank_1")
   constructor() {
     super("Location_1");
   }
@@ -20,11 +20,13 @@ export default class Location_1 extends Phaser.Scene{
     this.matter.world.drawDebug = true;
     this.cam = this.cameras.main;
     this.body.setup(this);
+    this.body2.setup(this);
 
-
-
+    let pointer = this.input.activePointer;
+    let worldXY = pointer.positionToCamera(this.cam);
 
     let pointT = this.matter.add.sprite(100, 100, 'runPoint',0,{isSensor:true,label:'cursor-state'}).play("runPoint")
+    let pointM = this.matter.add.circle(worldXY.x, worldXY.y, 100,{isSensor:true,label:'cursor-move'});
 
     this.input.on('pointerdown', function(pointer){
       let worldXY = pointer.positionToCamera(this.cam);
@@ -39,7 +41,7 @@ export default class Location_1 extends Phaser.Scene{
 
   update(time, delta) {
     this.body.draw()
-
+    this.body2.draw()
   }
 
 }

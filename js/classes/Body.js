@@ -125,7 +125,9 @@ this.scene.matter.add.constraint(this.constraint.corpus,this.constraint.sensor,0
     }, this);
 
 
+
     this.scene.matter.world.on('collisionstart', (event) => {
+      const nameTank = "tank" + this.name;
       event.pairs.forEach((pair) => {
         if (pair.bodyB.gameObject && pair.bodyB.label === "pule") {
           pair.bodyB.gameObject.play("pule-blast-run").once("animationcomplete", () => {
@@ -133,17 +135,18 @@ this.scene.matter.add.constraint(this.constraint.corpus,this.constraint.sensor,0
 
           })
         }
-        if (pair.bodyB.label === "pule" && pair.bodyA.label === "tank" + this.name) {
+        if (pair.bodyB.label === "pule" && pair.bodyA.label === nameTank) {
           this.takeDamage(this.attack)
         }
-        if (pair.bodyB.label === "sensor" && pair.bodyA.label === "tank" + this.name) {
+        if (pair.bodyB.label === "sensor" && pair.bodyA.label === nameTank) {
           this.pule(0,0)
         }
 
-        if (pair.bodyB.label === "tank" + this.name && pair.bodyA.label === "cursor-state") {
-          this.scene.matter.setVelocity(pair.bodyB, 0, 0);
+        if (pair.bodyB.label === "cursor-state" && pair.bodyA.label === nameTank) {
+          this.scene.matter.setVelocity(pair.bodyA, 0, 0);
           this.dx = null
           this.dy = null
+          console.log(this.dx)
           console.log(pair.bodyB)
         }
 
