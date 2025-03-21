@@ -9,6 +9,8 @@ export default class Body {
   keyObjects
   corpus
   velocity
+  dx = null
+  dy = null
   cam
   worldXY
   speed = 2
@@ -20,12 +22,14 @@ export default class Body {
     muzzle: null,
     corpus: null,
     pule: null,
-    live: null
+    live: null,
+    sensor:null
   }
   headImg
   corpusImg
   healthBar
   cursorKeys
+  scale = 0.5
   control = {
     left: false,
     right: false,
@@ -47,31 +51,32 @@ export default class Body {
 
 
   setup(scene) {
-    this.scene = scene;
 
+
+    this.scene = scene;
     this.healthBar = this.scene.add.graphics();
     this.healthBar.fillStyle(0x00ff00, 1);
     this.healthBar.fillRect(this.x - 50, this.y - 80, 100, 10);
     this.healthBar.setDepth(100);
 
     const M = Phaser.Physics.Matter.Matter;
-    this.constraint.corpus = this.scene.matter.add.sprite(this.x, this.y, this.corpusImg, 0, {label: "tank" + this.name}).setRectangle(200, 200).setScale(0.7).setDepth(1);
-    this.constraint.head = this.scene.matter.add.sprite(this.x, this.y, this.headImg, 0, {label: "tank" + this.name}).setSensor(true).setScale(0.7).setDepth(2);
+    this.constraint.sensor = this.scene.matter.add.circle(this.x,this.y,300,{isSensor:true,label:"sensor"})
+    this.constraint.corpus = this.scene.matter.add.sprite(this.x, this.y, this.corpusImg, 0, {label: "tank" + this.name}).setRectangle(200, 200).setScale(this.scale).setDepth(1);
+    this.constraint.head = this.scene.matter.add.sprite(this.x, this.y, this.headImg, 0, {label: "tank" + this.name}).setSensor(true).setScale(this.scale).setDepth(2);
     this.constraint.corpus.health = this.live;
     this.constraint.main = this.scene.matter.add.constraint(this.constraint.corpus, this.constraint.head, 0.01, 1, {
       pointA: {
         x: 0,
-        y: 40,
+        y: 20,
       },
       pointB: {
         x: 0,
-        y: 40,
+        y: 30,
       },
       damping: 0,
       angularStiffness: 1
     }).label = "tank"
-
-
+this.scene.matter.add.constraint(this.constraint.corpus,this.constraint.sensor,0,1)
     this.cam = this.scene.cameras.main;
     this.cam.startFollow(this.constraint.corpus, true);
     this.cam.setBounds(0, 0, this.scene.widthInPixels, this.scene.heightInPixels);
@@ -99,27 +104,24 @@ export default class Body {
       repeat: 0
     });
 
-    this.scene.input.on('pointerdown', function (pointer) {
-      this.constraint.pule = this.scene.matter.add
-        .sprite(this.constraint.head.body.position.x, this.constraint.head.body.position.y, 'pule', "pule", {label: "pule"}).setScale(0.8)
-        .setSensor(true).play("pule-departure-run").once('animationcomplete', () => {
-          this.constraint.pule.setTexture("pule"); // Останавливаем анимацию
-        });
-      let touchX = pointer.x;
-      let touchY = pointer.y;
-      this.worldXY = pointer.positionToCamera(this.cam);
-      const dx = this.worldXY.x - this.constraint.head.body.position.x;
-      const dy = this.worldXY.y - this.constraint.head.body.position.y;
-      const angle = Math.atan2(dy, dx) + Math.PI / 2;
-      this.scene.matter.body.setAngle(this.constraint.pule.body, angle);
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const speed = 10; // Можно менять скорость
-      const velocity = {x: (dx / length) * speed, y: (dy / length) * speed};
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const moveX = this.constraint.head.body.position.x + (dx / distance) * 110;
-      const moveY = this.constraint.head.body.position.y + (dy / distance) * 110;
-      this.constraint.pule.setPosition(moveX, moveY)
-      this.scene.matter.setVelocity(this.constraint.pule.body, velocity.x, velocity.y);
+
+
+
+ let interval =  setInterval(()=>{
+
+     clearInterval(interval)
+   },1000)
+
+    this.scene.input.on('pointerdown', function(pointer){
+      let worldXY = pointer.positionToCamera(this.cam);
+      this.dx = worldXY.x - this.constraint.corpus.body.position.x;
+      this.dy = worldXY.y - this.constraint.corpus.body.position.y;
+      // ...
+    }, this);
+    this.scene.input.on('pointerup', function(pointer){
+      //    this.dx = null;
+      //   this.dy = null;
+      // ...
     }, this);
 
 
@@ -134,6 +136,16 @@ export default class Body {
         if (pair.bodyB.label === "pule" && pair.bodyA.label === "tank" + this.name) {
           this.takeDamage(this.attack)
         }
+        if (pair.bodyB.label === "sensor" && pair.bodyA.label === "tank" + this.name) {
+          this.pule(0,0)
+        }
+
+        if (pair.bodyB.label === "tank" + this.name && pair.bodyA.label === "cursor-state") {
+          this.scene.matter.setVelocity(pair.bodyB, 0, 0);
+          this.dx = null
+          this.dy = null
+          console.log(pair.bodyB)
+        }
 
       });
     });
@@ -147,17 +159,37 @@ export default class Body {
     let pointer = this.scene.input.activePointer;
     let worldXY = pointer.positionToCamera(this.cam);
 
-    const dx = worldXY.x - this.constraint.corpus.body.position.x;
-    const dy = worldXY.y - this.constraint.corpus.body.position.y;
+if(pointer.isDown){
+  this.dx = worldXY.x - this.constraint.corpus.body.position.x;
+  this.dy = worldXY.y - this.constraint.corpus.body.position.y;
+}
 
-    // Вычисляем угол в радианах
-    const angle = Math.atan2(dy, dx) + Math.PI / 2;
+if(this.dx !== null || this.dy !== null){
 
-    // Устанавливаем угол объекту
-    this.scene.matter.body.setAngle(this.constraint.head.body, angle);
-    const speed = 18; // Можно менять скорость
-    const velocity = {x: (dx / length) * speed, y: (dy / length) * speed};
-    const distance = Math.sqrt(dx * dx + dy * dy);
+  // Вычисляем угол в радианах
+  const angle = Math.atan2(this.dy, this.dx) + Math.PI / 2;
+
+  // Вычисляем текущий угол объекта
+  const currentAngle = this.constraint.corpus.body.angle;
+
+  // Рассчитываем разницу углов
+  let angleDiff = angle - currentAngle;
+
+  // Нормализуем разницу углов для корректного направления вращения
+  angleDiff = Phaser.Math.Angle.Wrap(angleDiff);
+
+  // Устанавливаем угловую скорость
+  const angularSpeed = 0.1; // Подбери подходящее значение для скорости
+  this.scene.matter.body.setAngularVelocity(this.constraint.corpus.body, angleDiff * angularSpeed);
+  const length = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+  const speed = 5; // Можно менять скорость
+  const velocity = {x: (this.dx / length) * speed, y: (this.dy / length) * speed};
+  const distance = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+  this.scene.matter.setVelocity(this.constraint.corpus.body, velocity.x, velocity.y);
+}
+
+
+
 
 
     if (this.control.left.isDown || this.cursorKeys.left.isDown) {
@@ -193,6 +225,28 @@ export default class Body {
 
     this.liveDraw()
 
+  }
+
+  pule(x,y){
+    this.constraint.pule = this.scene.matter.add
+      .sprite(this.constraint.head.body.position.x, this.constraint.head.body.position.y, 'pule', "pule", {label: "pule"}).setScale(0.8)
+      .setSensor(true).play("pule-departure-run").once('animationcomplete', () => {
+        this.constraint.pule.setTexture("pule"); // Останавливаем анимацию
+      });
+
+
+    const dx = x - this.constraint.head.body.position.x;
+    const dy = y - this.constraint.head.body.position.y;
+    const angle = Math.atan2(dy, dx) + Math.PI / 2;
+    this.scene.matter.body.setAngle(this.constraint.pule.body, angle);
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const speed = 10; // Можно менять скорость
+    const velocity = {x: (dx / length) * speed, y: (dy / length) * speed};
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const moveX = this.constraint.head.body.position.x + (dx / distance) * 110;
+    const moveY = this.constraint.head.body.position.y + (dy / distance) * 110;
+    this.constraint.pule.setPosition(moveX, moveY)
+    this.scene.matter.setVelocity(this.constraint.pule.body, velocity.x, velocity.y);
   }
 
   liveDraw() {

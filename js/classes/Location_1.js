@@ -2,8 +2,9 @@ import Phaser from "phaser"
 import Body from "./Body";
 export default class Location_1 extends Phaser.Scene{
   map
+  cam
   body = new Body(500,500,"tank_1")
-  body2 = new Body(600,600,"tank_2")
+
   constructor() {
     super("Location_1");
   }
@@ -17,10 +18,19 @@ export default class Location_1 extends Phaser.Scene{
     this.matter.world.setBounds(this.map.widthInPixels, this.map.heightInPixels);
     this.matter.world.createDebugGraphic();
     this.matter.world.drawDebug = true;
+    this.cam = this.cameras.main;
+    this.body.setup(this);
 
-    this.body.setup(this)
-    this.body2.setup(this)
 
+
+
+    let pointT = this.matter.add.sprite(100, 100, 'runPoint',0,{isSensor:true,label:'cursor-state'}).play("runPoint")
+
+    this.input.on('pointerdown', function(pointer){
+      let worldXY = pointer.positionToCamera(this.cam);
+       pointT.setPosition(worldXY.x,worldXY.y)
+
+    }, this);
 
 
 

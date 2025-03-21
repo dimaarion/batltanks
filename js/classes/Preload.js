@@ -22,6 +22,10 @@ export default class Preload extends Phaser.Scene{
       frameWidth: 64,
       frameHeight: 64
     });
+    this.load.spritesheet('image-point', './img/sprites/pule-on.png', {
+      frameWidth: 64,
+      frameHeight: 64
+    });
 
 
 
@@ -31,6 +35,12 @@ export default class Preload extends Phaser.Scene{
 
   create(){
     this.scene.start('Start');
+    this.anims.create({
+      key: 'runPoint',
+      frames: this.anims.generateFrameNumbers('image-point', {start: 0, end: 3}),
+      frameRate: 5,
+      repeat: -1
+    });
   }
 
 }

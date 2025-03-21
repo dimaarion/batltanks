@@ -8,7 +8,7 @@ import Location_1 from "./classes/Location_1";
 
 
 const config = {
-  type: Phaser.AUTO,
+  type: Phaser.CANVAS,
   parent: 'Tanks',
   width: window.innerWidth,
   height: window.innerHeight,
