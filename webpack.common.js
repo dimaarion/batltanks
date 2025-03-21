@@ -10,11 +10,10 @@ module.exports = {
     app: './js/app.js',
 
   },
-
   plugins: [
 
     new HtmlWebpackPlugin({
-
+      template: './template/index.html',
       title: 'Production',
 
     }),
