@@ -1,5 +1,6 @@
 import Phaser from "phaser"
 import Body from "./Body";
+import Bot from "./Bot";
 
 export default class Location_1 extends Phaser.Scene {
   map
@@ -25,9 +26,9 @@ export default class Location_1 extends Phaser.Scene {
   activeObject = undefined
   edgeThreshold = 100;
   cameraSpeed = 4;
-  body = [new Body(500, 500, "tank_corpus_1"), new Body(600, 500, "tank_corpus_2")]
+  body = [new Body(100, 500, "tank_corpus_1"), new Body(300, 500, "tank_corpus_2"), new Body(600, 500, "tank_corpus_3")]
 
-  bodyBot = new Body(1000, 500, "bot_corpus")
+  bodyBot = [new Bot(1000, 500, "bot_corpus_1")]
 
   constructor() {
     super("Location_1");
@@ -49,7 +50,9 @@ export default class Location_1 extends Phaser.Scene {
     this.body.forEach((el) => {
       el.setup(this);
     })
-
+    this.bodyBot.forEach((el) => {
+      el.setup(this);
+    })
 
     this.cursorKeys = this.input.keyboard.createCursorKeys();
     this.control.space = this.input.keyboard.addKey('space');
@@ -66,56 +69,121 @@ export default class Location_1 extends Phaser.Scene {
 
     this.matter.world.on("collisionstart", (event) => {
       event.pairs.forEach((pair) => {
+        if (pair.bodyA.label.match(/bot/i) && pair.bodyB.label === "pule") {
+          pair.bodyB.gameObject.play("pule-blast-run").once("animationcomplete", () => {
+            this.matter.setVelocity(pair.bodyB, 0, 0);
 
+          })
+        }
+        if (pair.bodyA.label.match(/tank/i) && pair.bodyB.label === "pule") {
+          pair.bodyB.gameObject.play("pule-blast-run").once("animationcomplete", () => {
+            this.matter.setVelocity(pair.bodyB, 0, 0);
+
+          })
+        }
 
         if (pair.bodyA.label.match(/tank_corpus/i) && pair.bodyB.label === "cursor-move") {
-          this.activePoint = false
-          this.activeObject = pair.bodyA.label
+          this.activePoint = true
+          this.input.on('pointerdown', (pointer) => {
+            this.activeObject = pair.bodyA.label
+
+            this.body.forEach((el) => {
+              if (el.constraint.corpus.body === pair.bodyA) {
+                el.constraint.corpus.body.highlight = true;
+              } else {
+                el.constraint.corpus.body.highlight = false;
+              }
+
+            })
+          });
+
 
         }
         if (pair.bodyB.label.match(/tank_corpus/i) && pair.bodyA.label === "cursor-move") {
-          this.activePoint = false
-          this.activeObject = pair.bodyB.label
+          this.activePoint = true
+          this.input.on('pointerdown', (pointer) => {
+            this.activeObject = pair.bodyB.label
+          });
+
 
         }
-        if (/sensor/i.test(pair.bodyA.label) && pair.bodyB.label.match(/bot/i)) {
-          console.log(pair.bodyA.headObject)
-          this.body.filter((el)=>el.constraint.sensor === pair.bodyA).forEach((el)=>{
-            el.pule(pair.bodyA.headObject.body,pair.bodyB.position.x, pair.bodyB.position.y,true)
-          })
+        if (/pule/i.test(pair.bodyB.label) && pair.bodyB.bot === 0 && pair.bodyA.label.match(/bot/i)) {
 
+          this.bodyBot.forEach((el) => {
+            el.takeDamageBot(pair.bodyA,pair.bodyB.attack)
+          })
+        }
+        if (/pule/i.test(pair.bodyB.label) && pair.bodyB.bot === 1 && pair.bodyA.label.match(/tank/i)) {
+          this.body.filter((el)=>el.constraint.corpus.body === pair.bodyA).forEach((el) => {
+            el.takeDamage(pair.bodyA,pair.bodyB.attack)
+          })
         }
 
       });
     })
+    this.matter.world.on("collisionactive", (event) => {
+      event.pairs.forEach((pair) => {
+        if (/sensor/i.test(pair.bodyA.label) && pair.bodyB.label.match(/bot/i)) {
+          this.body.filter((el) => el.constraint.sensor === pair.bodyA).forEach((el) => {
+            el.timer.paused = false
+            el.constraint.sensor.positionBot = pair.bodyB.position
+            el.rotateHead(pair.bodyA.headObject.body, pair.bodyB.position.x, pair.bodyB.position.y, true)
+          })
+
+        }
+        if (/sensor/i.test(pair.bodyB.label) && pair.bodyA.label.match(/tank/i)) {
+          this.bodyBot.filter((el) => el.constraint.sensor === pair.bodyB).forEach((el) => {
+            el.timer.paused = false
+            el.constraint.sensor.positionBot = pair.bodyA.position
+            el.rotateHead(pair.bodyB.headObject.body, pair.bodyA.position.x, pair.bodyA.position.y, true)
+          })
+
+        }
+      })
+    })
+
     this.matter.world.on("collisionend", (event) => {
       event.pairs.forEach((pair) => {
         if ((pair.bodyA.label.match(/tank_corpus/i) && pair.bodyB.label === "cursor-move") || (pair.bodyB.label.match(/tank_corpus/i) && pair.bodyA.label === "cursor-move")) {
           // this.activePoint = true
+          this.activePoint = false
         }
         if (/sensor/i.test(pair.bodyA.label) && pair.bodyB.label.match(/bot/i)) {
-          console.log(pair.bodyA.headObject)
-          this.body.filter((el)=>el.constraint.sensor === pair.bodyA).forEach((el)=>{
-            el.pule(pair.bodyA.headObject.body,pair.bodyB.position.x, pair.bodyB.position.y,false)
+          this.body.filter((el) => el.constraint.sensor === pair.bodyA).forEach((el) => {
+            el.timer.paused = true
+            // el.pule(pair.bodyA.headObject.body,pair.bodyB.position.x, pair.bodyB.position.y,false)
+            el.rotateHead(pair.bodyA.headObject.body, pair.bodyB.position.x, pair.bodyB.position.y, false)
           })
 
         }
+
+        if (/sensor/i.test(pair.bodyB.label) && pair.bodyA.label.match(/tank/i)) {
+          this.bodyBot.filter((el) => el.constraint.sensor === pair.bodyB).forEach((el) => {
+            el.timer.paused = true
+            el.constraint.sensor.positionBot = pair.bodyA.position
+            el.rotateHead(pair.bodyB.headObject.body, pair.bodyA.position.x, pair.bodyA.position.y, false)
+          })
+
+        }
+
 
       });
     })
 
     this.input.on('pointerdown', (pointer) => {
       let worldXY = pointer.positionToCamera(this.cam);
-      this.tankName = this.activeObject
-      this.body.filter((el)=>el.constraint.corpus.body.label === this.activeObject).forEach((el)=>{
-        el.constraint.corpus.body.pX = worldXY.x;
-        el.constraint.corpus.body.pY = worldXY.y;
-      })
+      if (!this.activePoint) {
+        this.tankName = this.activeObject
+        this.body.filter((el) => el.constraint.corpus.body.label === this.activeObject).forEach((el) => {
+          el.constraint.corpus.body.pX = worldXY.x;
+          el.constraint.corpus.body.pY = worldXY.y;
+        })
+      }
+
 
     });
 
 
-    this.bodyBot.setup(this)
   }
 
   update(time, delta) {
@@ -138,17 +206,18 @@ export default class Location_1 extends Phaser.Scene {
     }
 
 
-    if (pointer.isDown && this.activePoint) {
+    if (pointer.isDown && !this.activePoint) {
       this.pointT.setPosition(worldXY.x, worldXY.y)
     }
     this.pointM.setPosition(worldXY.x, worldXY.y)
 
-    this.body.filter((name)=>name.constraint.corpus.body.label).forEach((el) => {
+    this.body.filter((name) => name.constraint.corpus.body.label).forEach((el) => {
       el.draw()
     })
+    this.bodyBot.filter((name) => name.constraint.corpus.body.label).forEach((el) => {
+      el.move()
+    })
 
-
-   // this.bodyBot.draw()
 
   }
 
