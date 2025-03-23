@@ -1,6 +1,7 @@
 import Phaser from "phaser"
 import Body from "./Body";
-export default class Location_1 extends Phaser.Scene{
+
+export default class Location_1 extends Phaser.Scene {
   map
   cam
   pointT
@@ -17,19 +18,22 @@ export default class Location_1 extends Phaser.Scene{
     right: false,
     up: false,
     down: false,
-    space:false
+    space: false
   }
   cursorKeys
   tankName = 'tank_corpus_1'
-  activeObject = 'tank_corpus_1'
+  activeObject = undefined
   edgeThreshold = 100;
   cameraSpeed = 4;
-  body = new Body(500,500,"tank_corpus_1")
+  body = [new Body(500, 500, "tank_corpus_1"), new Body(600, 500, "tank_corpus_2")]
+
+  bodyBot = new Body(1000, 500, "bot_corpus")
+
   constructor() {
     super("Location_1");
   }
 
-  create(){
+  create() {
     this.map = this.make.tilemap({key: 'map'});
     let tiles = this.map.addTilesetImage("location_1", "tiles");
     this.layer = this.map.createLayer("ground", tiles, 0, 0);
@@ -39,10 +43,12 @@ export default class Location_1 extends Phaser.Scene{
     this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
 
     this.matter.world.createDebugGraphic();
-    this.matter.world.drawDebug = true;
+    this.matter.world.drawDebug = false;
     this.cam = this.cameras.main;
 
-   // this.body.setup(this);
+    this.body.forEach((el) => {
+      el.setup(this);
+    })
 
 
     this.cursorKeys = this.input.keyboard.createCursorKeys();
@@ -52,74 +58,97 @@ export default class Location_1 extends Phaser.Scene{
     let pointer = this.input.activePointer;
     let worldXY = pointer.positionToCamera(this.cam);
 
-    this.pointT = this.matter.add.sprite(100, 100, 'runPoint',0,{isSensor:true,label:'cursor-state'}).play("runPoint")
-    this.pointM = this.matter.add.sprite(worldXY.x, worldXY.y, "point-move",0,{label:'cursor-move'}).setCircle(50,{label:"cursor-move"}).setSensor(true).setName("cursor");
+    this.pointT = this.matter.add.sprite(100, 100, 'runPoint', 0, {
+      isSensor: true,
+      label: 'cursor-state'
+    }).play("runPoint")
+    this.pointM = this.matter.add.sprite(worldXY.x, worldXY.y, "point-move", 0, {label: 'cursor-move'}).setCircle(50, {label: "cursor-move"}).setSensor(true).setName("cursor");
 
-   this.matter.world.on("collisionstart",(event)=>{
-     event.pairs.forEach((pair) => {
+    this.matter.world.on("collisionstart", (event) => {
+      event.pairs.forEach((pair) => {
 
 
-       if (pair.bodyA.label.match(/tank_corpus/i) && pair.bodyB.label === "cursor-move") {
-         this.activePoint = false
-         this.activeObject = pair.bodyA.label
-         console.log(this.tankName)
-       }
-       if (pair.bodyB.label.match(/tank_corpus/i) && pair.bodyA.label === "cursor-move") {
-         this.activePoint = false
-         this.activeObject = pair.bodyB.label
-         console.log(this.tankName)
-       }
-     });
-   })
-    this.matter.world.on("collisionend",(event)=>{
+        if (pair.bodyA.label.match(/tank_corpus/i) && pair.bodyB.label === "cursor-move") {
+          this.activePoint = false
+          this.activeObject = pair.bodyA.label
+
+        }
+        if (pair.bodyB.label.match(/tank_corpus/i) && pair.bodyA.label === "cursor-move") {
+          this.activePoint = false
+          this.activeObject = pair.bodyB.label
+
+        }
+        if (/sensor/i.test(pair.bodyA.label) && pair.bodyB.label.match(/bot/i)) {
+          console.log(pair.bodyA.headObject)
+          this.body.filter((el)=>el.constraint.sensor === pair.bodyA).forEach((el)=>{
+            el.pule(pair.bodyA.headObject.body,pair.bodyB.position.x, pair.bodyB.position.y,true)
+          })
+
+        }
+
+      });
+    })
+    this.matter.world.on("collisionend", (event) => {
       event.pairs.forEach((pair) => {
         if ((pair.bodyA.label.match(/tank_corpus/i) && pair.bodyB.label === "cursor-move") || (pair.bodyB.label.match(/tank_corpus/i) && pair.bodyA.label === "cursor-move")) {
-          this.activePoint = true
+          // this.activePoint = true
         }
+        if (/sensor/i.test(pair.bodyA.label) && pair.bodyB.label.match(/bot/i)) {
+          console.log(pair.bodyA.headObject)
+          this.body.filter((el)=>el.constraint.sensor === pair.bodyA).forEach((el)=>{
+            el.pule(pair.bodyA.headObject.body,pair.bodyB.position.x, pair.bodyB.position.y,false)
+          })
+
+        }
+
       });
     })
 
     this.input.on('pointerdown', (pointer) => {
+      let worldXY = pointer.positionToCamera(this.cam);
       this.tankName = this.activeObject
-     if(pointer.x < 200){
-       this.body.setup(this);
-     }
+      this.body.filter((el)=>el.constraint.corpus.body.label === this.activeObject).forEach((el)=>{
+        el.constraint.corpus.body.pX = worldXY.x;
+        el.constraint.corpus.body.pY = worldXY.y;
+      })
+
     });
 
 
-
+    this.bodyBot.setup(this)
   }
 
   update(time, delta) {
 
     let pointer = this.input.activePointer;
     let worldXY = pointer.positionToCamera(this.cam);
-if(this.control.space.isDown){
-  if(pointer.x < this.edgeThreshold){
-    this.cam.scrollX -= this.cameraSpeed;
-  }
-  if(pointer.x > this.game.config.width - this.edgeThreshold){
-    this.cam.scrollX +=  this.cameraSpeed;
-  }
-  if(pointer.y > this.game.config.height - this.edgeThreshold){
-    this.cam.scrollY += this.cameraSpeed;
-  }
-  if(pointer.y < this.edgeThreshold){
-    this.cam.scrollY -= this.cameraSpeed;
-  }
-}
-
-
-    if(pointer.isDown && this.activePoint){
-      this.pointT.setPosition(worldXY.x,worldXY.y)
+    if (this.control.space.isDown) {
+      if (pointer.x < this.edgeThreshold) {
+        this.cam.scrollX -= this.cameraSpeed;
+      }
+      if (pointer.x > this.game.config.width - this.edgeThreshold) {
+        this.cam.scrollX += this.cameraSpeed;
+      }
+      if (pointer.y > this.game.config.height - this.edgeThreshold) {
+        this.cam.scrollY += this.cameraSpeed;
+      }
+      if (pointer.y < this.edgeThreshold) {
+        this.cam.scrollY -= this.cameraSpeed;
+      }
     }
-    this.pointM.setPosition(worldXY.x,worldXY.y)
 
 
-    this.matter.world.engine.world.bodies.filter((el)=>el.gameObject && el.label === this.tankName).forEach((tank) => {
-      this.body.draw(tank)
+    if (pointer.isDown && this.activePoint) {
+      this.pointT.setPosition(worldXY.x, worldXY.y)
+    }
+    this.pointM.setPosition(worldXY.x, worldXY.y)
+
+    this.body.filter((name)=>name.constraint.corpus.body.label).forEach((el) => {
+      el.draw()
     })
 
+
+   // this.bodyBot.draw()
 
   }
 
