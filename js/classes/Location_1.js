@@ -25,28 +25,31 @@ export default class Location_1 extends Phaser.Scene {
   tankName = 'tank_corpus_1'
   activeObject = undefined
   edgeThreshold = 100;
+  block
   cameraSpeed = 4;
   body = [new Body(100, 500, "tank_corpus_1"), new Body(300, 500, "tank_corpus_2"), new Body(600, 500, "tank_corpus_3")]
 
-  bodyBot = [new Bot(1000, 500, "bot_corpus_1")]
+  bodyBot = [new Bot(1000, 500, "bot_corpus_1"),new Bot(1500, 500, "bot_corpus_2")]
 
   constructor() {
     super("Location_1");
   }
 
   create() {
-    this.map = this.make.tilemap({key: 'map'});
-    let tiles = this.map.addTilesetImage("location_1", "tiles");
+    this.map = this.make.tilemap({key: 'map',tileWidth: 32, tileHeight: 32 });
+    let tiles = this.map.addTilesetImage("location_1", "tiles", 32, 32, 0, 0);
     this.layer = this.map.createLayer("ground", tiles, 0, 0);
+    this.block = this.map.createLayer("block", tiles, 0, 0);
     this.layer.setCollisionByProperty({collides: true});
     this.map.setCollisionByExclusion(-1, true);
-    this.matter.world.setBounds(this.map.widthInPixels, this.map.heightInPixels);
-    this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-
+    this.matter.world.convertTilemapLayer(this.block);
     this.matter.world.createDebugGraphic();
     this.matter.world.drawDebug = false;
     this.cam = this.cameras.main;
-
+    this.cameras.main.zoom = 1;
+    this.matter.world.setBounds(0,0,this.map.widthInPixels, this.map.heightInPixels);
+    this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
+    this.cameras.main.roundPixels = true;
     this.body.forEach((el) => {
       el.setup(this);
     })
@@ -109,7 +112,7 @@ export default class Location_1 extends Phaser.Scene {
         }
         if (/pule/i.test(pair.bodyB.label) && pair.bodyB.bot === 0 && pair.bodyA.label.match(/bot/i)) {
 
-          this.bodyBot.forEach((el) => {
+          this.bodyBot.filter((el)=>el.constraint.corpus.body === pair.bodyA).forEach((el) => {
             el.takeDamageBot(pair.bodyA,pair.bodyB.attack)
           })
         }
@@ -125,17 +128,38 @@ export default class Location_1 extends Phaser.Scene {
       event.pairs.forEach((pair) => {
         if (/sensor/i.test(pair.bodyA.label) && pair.bodyB.label.match(/bot/i)) {
           this.body.filter((el) => el.constraint.sensor === pair.bodyA).forEach((el) => {
-            el.timer.paused = false
-            el.constraint.sensor.positionBot = pair.bodyB.position
-            el.rotateHead(pair.bodyA.headObject.body, pair.bodyB.position.x, pair.bodyB.position.y, true)
+            if(el.constraint.corpus.body.health < 1){
+              el.timer.paused = true
+            }else {
+              if(pair.bodyB.health === 0){
+                el.timer.paused = true
+              }else {
+                el.timer.paused = false
+                el.constraint.sensor.positionBot = pair.bodyB.position
+                el.rotateHead(pair.bodyA.headObject.body, pair.bodyB.position.x, pair.bodyB.position.y, true)
+              }
+
+            }
+
+
           })
 
         }
         if (/sensor/i.test(pair.bodyB.label) && pair.bodyA.label.match(/tank/i)) {
           this.bodyBot.filter((el) => el.constraint.sensor === pair.bodyB).forEach((el) => {
-            el.timer.paused = false
-            el.constraint.sensor.positionBot = pair.bodyA.position
-            el.rotateHead(pair.bodyB.headObject.body, pair.bodyA.position.x, pair.bodyA.position.y, true)
+            if(el.constraint.corpus.body.health < 1){
+              el.timer.paused = true
+            }else {
+              if(pair.bodyA.health === 0){
+                el.timer.paused = true
+              }else {
+                el.timer.paused = false
+                el.constraint.sensor.positionBot = pair.bodyA.position
+                el.rotateHead(pair.bodyB.headObject.body, pair.bodyA.position.x, pair.bodyA.position.y, true)
+              }
+
+            }
+
           })
 
         }
@@ -151,8 +175,13 @@ export default class Location_1 extends Phaser.Scene {
         if (/sensor/i.test(pair.bodyA.label) && pair.bodyB.label.match(/bot/i)) {
           this.body.filter((el) => el.constraint.sensor === pair.bodyA).forEach((el) => {
             el.timer.paused = true
-            // el.pule(pair.bodyA.headObject.body,pair.bodyB.position.x, pair.bodyB.position.y,false)
-            el.rotateHead(pair.bodyA.headObject.body, pair.bodyB.position.x, pair.bodyB.position.y, false)
+            if(el.constraint.corpus.body.health > 1) {
+              el.constraint.sensor.positionBot = pair.bodyB.position
+              if(pair.bodyB.health !== 0) {
+                el.rotateHead(pair.bodyA.headObject.body, pair.bodyB.position.x, pair.bodyB.position.y, false)
+              }
+            }
+
           })
 
         }
@@ -160,8 +189,12 @@ export default class Location_1 extends Phaser.Scene {
         if (/sensor/i.test(pair.bodyB.label) && pair.bodyA.label.match(/tank/i)) {
           this.bodyBot.filter((el) => el.constraint.sensor === pair.bodyB).forEach((el) => {
             el.timer.paused = true
-            el.constraint.sensor.positionBot = pair.bodyA.position
-            el.rotateHead(pair.bodyB.headObject.body, pair.bodyA.position.x, pair.bodyA.position.y, false)
+            if(el.constraint.corpus.body.health > 1) {
+              el.constraint.sensor.positionBot = pair.bodyA.position
+              if(pair.bodyA.health !== 0) {
+              el.rotateHead(pair.bodyB.headObject.body, pair.bodyA.position.x, pair.bodyA.position.y, false)
+                }
+            }
           })
 
         }
@@ -174,13 +207,17 @@ export default class Location_1 extends Phaser.Scene {
       let worldXY = pointer.positionToCamera(this.cam);
       if (!this.activePoint) {
         this.tankName = this.activeObject
-        this.body.filter((el) => el.constraint.corpus.body.label === this.activeObject).forEach((el) => {
+        this.body.filter((el) => el.constraint.corpus.body.label === this.activeObject && el.constraint.corpus.body.health > 1).forEach((el) => {
           el.constraint.corpus.body.pX = worldXY.x;
           el.constraint.corpus.body.pY = worldXY.y;
+
         })
       }
-
-
+      this.body.forEach((el)=>{
+        if(el.constraint.corpus.body.label === this.activeObject){
+        //  this.cam.startFollow(el.constraint.corpus, true);
+        }
+      })
     });
 
 

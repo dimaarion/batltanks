@@ -7,7 +7,7 @@ export default class Body {
   botPosition = {x: 0, y: 0}
   scene;
   name
-  keyObjects  = null
+  keyObjects = null
   corpus
   speedPule = 1000
   velocity
@@ -32,9 +32,10 @@ export default class Body {
     pule: null,
     live: null,
     sensor: null,
-    track:[],
-    burning:null
+    track: [],
+    burning: null
   }
+  targetBot = { x: 0, y:0 }
   highlight
   sensorHighlight
   headImg
@@ -53,7 +54,7 @@ export default class Body {
   timer
   live = 100
   target
-  worldXY = {x:0,y:0}
+  worldXY = {x: 0, y: 0}
   action = new Action();
 
   constructor(x, y, name, head = 'Gun_01', corpus = 'Hull_01') {
@@ -80,17 +81,29 @@ export default class Body {
     this.sensorHighlight.lineStyle(4, 0x808080, 0.5);
 
 
-    this.constraint.track = [{x:40,y:0},{x:-40,y:0}].map((el)=>this.scene.matter.add.sprite(this.x,this.y,"track","run-track",{isSensor:true,cP:el}).play("run-track").stop().setScale(0.7))
-    this.constraint.corpus = this.scene.matter.add.sprite(this.x, this.y, this.corpusImg, 0, {label: this.name}).setRectangle(200, 200, {label: this.name,pX:this.x,pY:this.y,highlight:false,health:this.live}).setScale(this.scale).setDepth(1).setName(this.name);
+    this.constraint.track = [{x: 40, y: 0}, {
+      x: -40,
+      y: 0
+    }].map((el) => this.scene.matter.add.sprite(this.x, this.y, "track", "run-track", {
+      isSensor: true,
+      cP: el
+    }).play("run-track").stop().setFixedRotation().setScale(0.7))
+    this.constraint.corpus = this.scene.matter.add.sprite(this.x, this.y, this.corpusImg, 0, {label: this.name}).setRectangle(200, 200, {
+      label: this.name,
+      pX: this.x,
+      pY: this.y,
+      highlight: false,
+      health: this.live
+    }).setScale(this.scale).setDepth(1).setName(this.name);
     this.constraint.head = this.scene.matter.add.sprite(this.x, this.y, this.headImg, 0, {label: "head"}).setSensor(true).setScale(this.scale).setDepth(2);
     this.constraint.sensor = this.scene.matter.add.circle(this.x, this.y, this.radiusSensor, {
       isSensor: true,
       label: this.nameSensor,
-      positionBot:{x:0,y:0},
-      headObject:this.constraint.head
+      positionBot: {x: 0, y: 0},
+      headObject: this.constraint.head
 
     })
-    this.constraint.burning = this.scene.matter.add.sprite(this.x,this.y,"pule-blast","burning",{isSensor:true}).setDepth(10)
+    this.constraint.burning = this.scene.matter.add.sprite(this.x, this.y, "pule-blast", "burning", {isSensor: true}).setDepth(10)
     this.constraint.main = this.scene.matter.add.constraint(this.constraint.corpus, this.constraint.head, 0.01, 1, {
       pointA: {
         x: 0,
@@ -106,9 +119,9 @@ export default class Body {
 
     this.headSensor = this.scene.matter.add.constraint(this.constraint.head, this.constraint.sensor, 0, 1);
     this.scene.matter.add.constraint(this.constraint.head, this.constraint.burning, 0, 1);
-    this.constraint.track.forEach((el)=>{
+    this.constraint.track.forEach((el) => {
 
-      this.scene.matter.add.constraint(this.constraint.corpus, el, 0, 1,{
+      this.scene.matter.add.constraint(this.constraint.corpus, el, 0, 1, {
         pointA: {
           x: 0,
           y: 0,
@@ -121,8 +134,8 @@ export default class Body {
         angularStiffness: 1
       });
     })
-    this.constraint.track.forEach((el)=>{
-    el.body.angle = this.constraint.corpus.body.angle;
+    this.constraint.track.forEach((el) => {
+      el.body.angle = this.constraint.corpus.body.angle;
     })
     this.cam = this.scene.cameras.main;
     this.cursorKeys = scene.input.keyboard.createCursorKeys();
@@ -141,76 +154,78 @@ export default class Body {
       //args: [],
       callbackScope: this,
       loop: true,
-      paused:true
+      paused: true
     });
 
   }
 
 
-
-  trackAngle(){
-    this.constraint.track.forEach((el)=>{
+  trackAngle() {
+    this.constraint.track.forEach((el) => {
       el.body.angle = this.constraint.corpus.body.angle;
     })
   }
 
-  draw() {
-    this.trackAngle()
-  this.dx = this.constraint.corpus.body.pX - this.constraint.corpus.body.position.x;
-  this.dy = this.constraint.corpus.body.pY - this.constraint.corpus.body.position.y;
-  this.moveTo(this.constraint.corpus.body,  this.constraint.corpus.body.pX, this.constraint.corpus.body.pY)
+  rotateTank(x,y){
+    this.dx = x - this.constraint.corpus.body.position.x;
+    this.dy = y - this.constraint.corpus.body.position.y;
+    this.moveTo(this.constraint.corpus.body, this.constraint.corpus.body.pX, this.constraint.corpus.body.pY)
+    // Вычисляем угол в радианах
+    const angle = Math.atan2(this.dy, this.dx) + Math.PI / 2;
+    // Вычисляем текущий угол объекта
+    const currentAngle = this.constraint.corpus.body.angle;
+    // Рассчитываем разницу углов
+    let angleDiff = angle - currentAngle;
+    // Нормализуем разницу углов для корректного направления вращения
+    angleDiff = Phaser.Math.Angle.Wrap(angleDiff);
+    // Устанавливаем угловую скорость
+    const angularSpeed = 0.1; // Подбери подходящее значение для скорости
+    this.scene.matter.body.setAngularVelocity(this.constraint.corpus.body, angleDiff * angularSpeed);
+    const length = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+    const speed = 5; // Можно менять скорость
+    const velocity = {x: (this.dx / length) * speed, y: (this.dy / length) * speed};
+    const distance = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
 
+    if (this.target) {
+      const distance = Phaser.Math.Distance.Between(this.constraint.corpus.body.position.x, this.constraint.corpus.body.position.y, this.target.x, this.target.y);
 
-  // Вычисляем угол в радианах
-  const angle = Math.atan2(this.dy, this.dx) + Math.PI / 2;
-
-  // Вычисляем текущий угол объекта
-  const currentAngle = this.constraint.corpus.body.angle;
-
-  // Рассчитываем разницу углов
-  let angleDiff = angle - currentAngle;
-
-  // Нормализуем разницу углов для корректного направления вращения
-  angleDiff = Phaser.Math.Angle.Wrap(angleDiff);
-
-  // Устанавливаем угловую скорость
-  const angularSpeed = 0.1; // Подбери подходящее значение для скорости
-  this.scene.matter.body.setAngularVelocity(this.constraint.corpus.body, angleDiff * angularSpeed);
-  const length = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
-  const speed = 5; // Можно менять скорость
-  const velocity = {x: (this.dx / length) * speed, y: (this.dy / length) * speed};
-  const distance = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
-
-  if (this.target) {
-    const distance = Phaser.Math.Distance.Between(this.constraint.corpus.body.position.x, this.constraint.corpus.body.position.y, this.target.x, this.target.y);
-
-    if (distance < 200) { // Если близко к цели, останавливаем
-      this.scene.matter.setVelocity(this.constraint.corpus.body, 0, 0);
-      this.target = null; // Убираем цель
+      if (distance < 200) { // Если близко к цели, останавливаем
+        this.scene.matter.setVelocity(this.constraint.corpus.body, 0, 0);
+        this.target = null; // Убираем цель
+      }
     }
+    this.trackAnimate()
   }
-    this.constraint.track.forEach((el)=>{
 
-      if(this.target !== null){
-        el.play("run-track",true)
-      }else {
+
+  trackAnimate(){
+    this.constraint.track.forEach((el) => {
+
+      if (this.target !== null) {
+        el.play("run-track", true)
+      } else {
         el.stop()
       }
 
     })
+  }
 
-    if(this.constraint.corpus.body.highlight){
+
+  draw() {
+    this.trackAngle()
+    this.rotateTank(this.constraint.corpus.body.pX,this.constraint.corpus.body.pY)
+
+    if (this.constraint.corpus.body.highlight) {
       this.highlight.clear()
       this.sensorHighlight.clear()
       this.highlight.lineStyle(4, 0xff0000, 1)
       this.highlight.strokeCircle(this.constraint.corpus.body.position.x, this.constraint.corpus.body.position.y, 100);
       this.sensorHighlight.lineStyle(4, 0x808080, 0.5);
       this.sensorHighlight.strokeCircle(this.constraint.head.body.position.x, this.constraint.head.body.position.y, this.radiusSensor);
-    }else {
+    } else {
       this.highlight.clear()
       this.sensorHighlight.clear()
-     // this.highlight.lineStyle(4, 0xff0000, 0)
-     // this.sensorHighlight.lineStyle(4, 0x808080, 0);
+
     }
 
     this.movePule()
@@ -229,7 +244,7 @@ export default class Body {
   }
 
 
-  movePule(){
+  movePule() {
     if (this.constraint.pule) {
       this.scene.matter.world.engine.world.bodies.filter((el) => el.label === this.namePule).forEach((pule) => {
         if (pule.speed < 1.5) {
@@ -244,7 +259,7 @@ export default class Body {
     }
   }
 
-  rotateHead(body,x, y,active = false){
+  rotateHead(body, x, y, active = false) {
 
 
     const dx = x - body.position.x;
@@ -264,24 +279,28 @@ export default class Body {
   }
 
   pule() {
-          this.constraint.pule = this.scene.matter.add
-            .sprite(this.constraint.sensor.headObject.body.position.x, this.constraint.sensor.headObject.body.position.y, 'pule', "pule", {label: this.namePule,attack:this.attack,bot:this.bot}).setScale(0.8)
-            .setSensor(true).setDepth(2)
-          .play("pule-departure-run").once('animationcomplete', () => {
-            this.constraint.pule.setTexture("pule"); // Останавливаем анимацию
-            });
-          const dx = this.constraint.sensor.positionBot.x - this.constraint.sensor.headObject.body.position.x;
-          const dy = this.constraint.sensor.positionBot.y - this.constraint.sensor.headObject.body.position.y;
-          const angle = Math.atan2(dy, dx) + Math.PI / 2;
-          this.scene.matter.body.setAngle(this.constraint.pule.body, angle);
-          const length = Math.sqrt(dx * dx + dy * dy);
-          const speed = 10; // Можно менять скорость
-          const velocity = {x: (dx / length) * speed, y: (dy / length) * speed};
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          const moveX = this.constraint.sensor.headObject.body.position.x + (dx / distance) * 50;
-          const moveY = this.constraint.sensor.headObject.body.position.y + (dy / distance) * 50;
-          this.constraint.pule.setPosition(moveX, moveY)
-          this.scene.matter.setVelocity(this.constraint.pule.body, velocity.x, velocity.y);
+    this.constraint.pule = this.scene.matter.add
+      .sprite(this.constraint.sensor.headObject.body.position.x, this.constraint.sensor.headObject.body.position.y, 'pule', "pule", {
+        label: this.namePule,
+        attack: this.attack,
+        bot: this.bot
+      }).setScale(0.8)
+      .setSensor(true).setDepth(2)
+      .play("pule-departure-run").once('animationcomplete', () => {
+        this.constraint.pule.setTexture("pule"); // Останавливаем анимацию
+      });
+    const dx = this.constraint.sensor.positionBot.x - this.constraint.sensor.headObject.body.position.x;
+    const dy = this.constraint.sensor.positionBot.y - this.constraint.sensor.headObject.body.position.y;
+    const angle = Math.atan2(dy, dx) + Math.PI / 2;
+    this.scene.matter.body.setAngle(this.constraint.pule.body, angle);
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const speed = 10; // Можно менять скорость
+    const velocity = {x: (dx / length) * speed, y: (dy / length) * speed};
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const moveX = this.constraint.sensor.headObject.body.position.x + (dx / distance) * 50;
+    const moveY = this.constraint.sensor.headObject.body.position.y + (dy / distance) * 50;
+    this.constraint.pule.setPosition(moveX, moveY)
+    this.scene.matter.setVelocity(this.constraint.pule.body, velocity.x, velocity.y);
   }
 
   liveDraw() {
@@ -294,8 +313,8 @@ export default class Body {
     if (healthWidth < 20) {
       this.healthBar.fillStyle(0xff0000, 1);
     }
-    if (healthWidth < 1){
-      this.constraint.burning.play("burning",true)
+    if (healthWidth < 1) {
+      this.constraint.burning.play("burning", true)
     }
     this.healthBar.fillRect(this.constraint.corpus.body.position.x - 50, this.constraint.corpus.body.position.y - 80, healthWidth, 10);
   }
@@ -304,8 +323,6 @@ export default class Body {
     body.health -= amount;
     if (body.health < 0) body.health = 0;
   }
-
-
 
 
 }
